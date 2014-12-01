@@ -1,0 +1,25 @@
+// Clearfix
+// http://www.cssmojo.com/latest_new_clearfix_so_far/
+// Other clearfix options: https://github.com/stubbornella/oocss/blob/master/oocss/src/components/utils/_clearfix-me.scss
+@mixin clearfix {
+	&:after {
+		content: "";
+		display: table;
+		clear: both;
+	}
+}
+
+// Text selection
+@mixin text-selection($color-selection, $color-selection-bg) {
+	::-moz-selection {
+		color: $color-selection;
+		background: $color-selection-bg;
+		text-shadow: none;
+	}
+
+	::selection {
+		color: $color-selection;
+		background: $color-selection-bg;
+		text-shadow: none;
+	}
+}
