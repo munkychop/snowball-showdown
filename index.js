@@ -1,4 +1,19 @@
 var _nuimotion = require("nuimotion");
+var _express = require("express");
+var _app = _express();
+var _server = require("http").Server(_app);
+var _path = require("path");
+var _io = require("socket.io")(_server);
+
+_app.use(_express.static(__dirname + "/public/dist"));
+
+_app.get("/", function(req, res){
+  res.sendFile("/index.html");
+});
+
+_server.listen(3000, function(){
+  console.log("listening on *:3000");
+});
 
 
 // mirror the skeleton joint variables so that it actually makes sense!
@@ -12,19 +27,13 @@ var THROW_GESTURE_END_PERCENT_EXTENDED = 80;
 
 var _throwGestureInProgress = false;
 var _activeThrowGestures = {left : false, right : false};
-var _throwgestureDirection = 0; // 1=forwards, -1=backwards, 0=no gesture in progress.
+var _userBiengTracked = false;
 
 // start the skeleton listener, add the joints, a callback and (optionally) a frame rate in milliseconds for checking
-_nuimotion.startSkeletonListener([
-    LEFT_HAND,
-    RIGHT_HAND,
-    HEAD],
-    skeletonUpdateHandler /* , 50 (the default) */ );
+_nuimotion.startSkeletonListener([LEFT_HAND, RIGHT_HAND, HEAD], skeletonUpdateHandler);
 
-_nuimotion.addListener(
-    [ _nuimotion.Events.SKELETON_TRACKING,
-        _nuimotion.Events.SKELETON_STOPPED_TRACKING ],
-    onEvent );
+_nuimotion.addListener([_nuimotion.Events.SKELETON_TRACKING], skeletonTrackingStartHandler);
+_nuimotion.addListener([_nuimotion.Events.SKELETON_STOPPED_TRACKING], skeletonTrackingStopHandler);
 
 _nuimotion.init();
 
@@ -44,10 +53,14 @@ function skeletonUpdateHandler (data)
     if (checkIfJointDidThrow("right", rightHandJoint, headJoint))
     {
         console.log("right hand throw detected!");
+
+        _io.sockets.emit("throw-gesture");
     }
     else if(checkIfJointDidThrow("left", leftHandJoint, headJoint))
     {
         console.log("left hand throw detected!");
+
+        _io.sockets.emit("throw-gesture");
     }
 }
 
@@ -86,16 +99,28 @@ function checkIfJointDidThrow (handName, handJoint, headJoint)
     return false;
 }
 
-/**
- * on general event (user/device/gesture/etc)
- * @param event
- */
-function onEvent(event) {
-    if (event.eventType == _nuimotion.Events.GESTURE) {
-        console.log("Gesture: " + event.gestureType + " Hand: " + event.hand + " State: " + event.step);
-    } else {
-        console.log("Event: " + event.eventType);
-    }
+
+function skeletonTrackingStartHandler (event)
+{
+
+    if (_userBiengTracked) return;
+
+    console.log("skeleton tracking started");
+
+    _userBiengTracked = true;
+
+    _io.sockets.emit("skeleton-tracking-start");
+}
+
+function skeletonTrackingStopHandler (event)
+{
+    if (!_userBiengTracked) return;
+
+    console.log("skeleton tracking stopped");
+
+    _userBiengTracked = false;
+
+    _io.sockets.emit("skeleton-tracking-stop");
 }
 
 
@@ -108,6 +133,10 @@ process.stdin.resume();//so the program will not close instantly
 function exitHandler(options, err) {
 
     _nuimotion.close();
+    _server.close();
+    
+    _io.sockets.removeAllListeners();
+    //_io.disconnect();
 
     if (options.cleanup)
     {

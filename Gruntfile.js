@@ -15,7 +15,8 @@ module.exports = function(grunt) {
 	var cssDistDir = "public/dist/css/";
 	var cssDistFile = "app.css";
 
-	var jadeSrcDir = "app/views/";
+	var markupSrcDir = "public/src/markup/";
+	var appDistDir = "public/dist/";
 
 	var imgSrcDir = "public/src/img/";
 	var imgDistDir = "public/dist/img/";
@@ -131,26 +132,15 @@ module.exports = function(grunt) {
 			}
 		},
 
-		connect: {
-
-			server : {
-				options: {
-					open: true
-				}
-			}
-		},
-
 		watch: {
 
 			options: {
 				livereload: true,
 			},
 
-			jade: {
-				files: [jadeSrcDir + "**/*.jade"],
-				options: {
-					livereload: true
-				}
+			markup: {
+				files: [markupSrcDir + "**/*.html"],
+				tasks: ["copy:markup"]
 			},
 			
 			js: {
@@ -175,6 +165,13 @@ module.exports = function(grunt) {
 				cwd: imgSrcDir,
 				src: "**/*.*",
 				dest: imgDistDir
+			},
+
+			markup: {
+				expand: true,
+				cwd: markupSrcDir,
+				src: "**/*.html",
+				dest: appDistDir
 			}
 		}
 	});
@@ -182,5 +179,5 @@ module.exports = function(grunt) {
 	require("load-grunt-tasks")(grunt);
 
 	grunt.registerTask("dev", ["sass:dev", "browserify:dev", "copy"]);
-	grunt.registerTask("start", ["sass:dev", "browserify:dev", "copy", "connect:server", "watch"]);
+	grunt.registerTask("start", ["sass:dev", "browserify:dev", "copy", "watch"]);
 };
